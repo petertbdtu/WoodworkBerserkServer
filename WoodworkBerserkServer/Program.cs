@@ -6,7 +6,9 @@ namespace WoodworkBerserkServer
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            WSService service = new WSService();
+            WSSocketListener.service = service;
+            WSSocketListener.StartListening();
         }
     }
 }
