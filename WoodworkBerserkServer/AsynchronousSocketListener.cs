@@ -96,20 +96,19 @@ namespace WoodworkBerserkServer
                     for (int i = 0; i < received.Length; i++)
                         received[i] = state.buffer[i];
 
-                    // All the data has been read from the
-                    // client. Display it on the console.
-                    Console.WriteLine("Read {0} bytes from socket. \n Data : {1}",
-                        received.Length, received);
+                    // TODO Update user input serverside
                     
-                    // Echo the data back to the client.
-                    Send(handler, received);
+                    // Write the response to the console.
+                    for (int i = 0; i < received.Length; i++)
+                        Console.WriteLine(received[i]);
                 }
-
-                // Not all data received. Get more.  
-                handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                new AsyncCallback(ReadCallback), state);
             }
+
+            // Always get more.
+            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+            new AsyncCallback(ReadCallback), state);
         }
+
         private static void Send(Socket handler, byte[] data)
         {
             // Begin sending the data to the remote device.  
