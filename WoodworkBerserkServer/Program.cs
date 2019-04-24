@@ -1,4 +1,6 @@
 ﻿using System;
+using WoodworkBerserkServer.Server;
+using WoodworkBerserkServer.Message;
 
 namespace WoodworkBerserkServer
 {
@@ -6,9 +8,8 @@ namespace WoodworkBerserkServer
     {
         static void Main(string[] args)
         {
-            WSService service = new WSService();
-            WSSocketListener.service = service;
-            WSSocketListener.StartListening();
+            WBService service = new WBService();
+            service.start();
         }
     }
 }
