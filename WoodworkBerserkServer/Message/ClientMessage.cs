@@ -33,10 +33,7 @@ namespace WoodworkBerserkServer.Message
                 case ClientMessageType.Command:
                     if (data.Length == 9)
                     {
-                        msg = new ClientMessageCommand();
-                        ((ClientMessageCommand)msg).ConnectionId = BitConverter.ToInt32(data, 1);
-                        ((ClientMessageCommand)msg).PlayerAction = (PlayerAction)BitConverter.ToInt32(data, 5);
-
+                        msg = new ClientMessageCommand(data);
                     }
                     else
                     {
@@ -166,8 +163,10 @@ namespace WoodworkBerserkServer.Message
     {
         public int ConnectionId { get; set; }
         public PlayerAction PlayerAction { get; set; }
-        public ClientMessageCommand()
+        public ClientMessageCommand(byte[] data)
         {
+            this.ConnectionId = BitConverter.ToInt32(data, 1);
+            this.PlayerAction = (PlayerAction)BitConverter.ToInt32(data, 5);
         }
         public override ClientMessageType GetClientMessageType()
         {

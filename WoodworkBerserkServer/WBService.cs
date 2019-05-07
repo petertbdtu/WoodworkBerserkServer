@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using WoodworkBerserkServer.Server;
 using WoodworkBerserkServer.Message;
 using System.Net;
@@ -22,6 +21,7 @@ namespace WoodworkBerserkServer
 
         WBServer server;
         ClientMessageHandler messageHandler;
+        bool running = false;
         
         public void start()
         {
@@ -33,7 +33,8 @@ namespace WoodworkBerserkServer
             Dictionary<int, IPEndPoint> clients = new Dictionary<int, IPEndPoint>();
 
             int connects = 0;
-            while (true)
+            running = true;
+            while (running)
             {
                 Console.WriteLine("tick");
                 
@@ -75,11 +76,30 @@ namespace WoodworkBerserkServer
                             break;
                     }
                 }
+                foreach (int pid in clients.Keys)
+                {
+                    IPEndPoint dest;
+                    if (clients.TryGetValue(pid, out dest))
+                    {
+                        // TODO generate state uniquely for each player
+                        ServerMessage sm = new ServerMessageUpdate(pid, 3, 3,
+                            new int[] { 0,0,0, 0,0,0, 0,0,0 }, // terrain
+                            new int[] { 0,0,2,2, 1,1,3,3, 2,1,4,4 }  // entities
+                            );
 
-                // TODO send data to players loop
+                        server.Send(sm, dest);
+                        Console.WriteLine("sent update to player with id="+pid);
+                    }
+                }
 
                 System.Threading.Thread.Sleep(2000);
             }
+        }
+
+        public void stop()
+        {
+            // shouldn't be necessary to sync this, right?
+            running = false;
         }
     }
 }

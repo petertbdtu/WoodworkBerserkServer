@@ -30,7 +30,7 @@ namespace WoodworkBerserkServer.Server
         public void StopListening()
         {
             keepListening = false;
-            // Is this necessary? Feels safer.
+            c.Close();
             t.Join();
         }
         public void Send(ServerMessage smsg, IPEndPoint dest)
@@ -45,6 +45,17 @@ namespace WoodworkBerserkServer.Server
                 try
                 {
                     listener.Call(ClientMessage.Parse(c.Receive(ref remoteIpEndPoint), remoteIpEndPoint));
+                }
+                catch (SocketException se)
+                {
+                    // TODO figure out how to get rid of disconnected users
+                    // apparently UDP has connections now
+                    // probably just need to disconnect client elsehwere
+                    // since 10054 comes from a previous failed send
+                    if (se.SocketErrorCode != SocketError.ConnectionReset)
+                    {
+                        throw se;
+                    }
                 }
                 catch (Exception e)
                 {
