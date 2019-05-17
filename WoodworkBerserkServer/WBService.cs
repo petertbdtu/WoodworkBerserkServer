@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using WoodworkBerserkServer.Server;
 using WoodworkBerserkServer.Message;
 using System.Net;
+using System.Text;
 
 namespace WoodworkBerserkServer
 {
@@ -29,8 +30,11 @@ namespace WoodworkBerserkServer
             server = new WBServer(PORT);
             server.StartListening(messageHandler);
 
+            Dictionary<int, WBPlayer> players = new Dictionary<int, WBPlayer>();
             // playerId and player connection endpoint
             Dictionary<int, IPEndPoint> clients = new Dictionary<int, IPEndPoint>();
+            // playerId and corresponding connection timeout
+            Dictionary<int, int> timeouts = new Dictionary<int, int>();
 
             int connects = 0;
             running = true;
@@ -41,55 +45,64 @@ namespace WoodworkBerserkServer
                 ClientMessage[] clientMessages = messageHandler.GetClientMessages();
                 foreach (ClientMessage clientMessage in clientMessages)
                 {
-                    // VERIFY MESSAGE WITH CONNECTION ID AND SEE IF IT MATCHES.
-                    // NEED TO ADD CONNECTION ID TO MESSAGE.
-                    // IGNORE IF IT DOESN'T MATCH (UNLESS IT'S A CONNECT)
-                    Console.WriteLine(ClientMessage.ConvertToString(clientMessage));
-                    switch (clientMessage.GetClientMessageType())
+                    if (clientMessage.GetClientMessageType() == ClientMessageType.Connect)
                     {
-                        case ClientMessageType.Connect:
-                            // Add player to list of connections
-                            // testing, please only connect once.
-                            // TODO get actual player id instead of 0.
-                            clients.Add(connects++, clientMessage.GetOrigin());
-                            Console.WriteLine("received connect!");
-                            break;
-                        case ClientMessageType.Disconnect:
-                            // Remove player from list of connections
-                            // Probably also check if stuff matches like in command :)
-                            //clients.Remove(0);
-                            Console.WriteLine("received disconnect!");
-                            break;
-                        case ClientMessageType.Pong:
-                            // Refresh player timeout?
-                            break;
-                        case ClientMessageType.Command:
-                            // Do shit
-                            // Check if connectionID matches IPEndPoint in clients
-                            Console.WriteLine("received command! "+((ClientMessageCommand)clientMessage).PlayerAction.ToString());
-                            break;
-                        case ClientMessageType.Invalid:
-                            Console.WriteLine("received invalid");
-                            break;
-                        default:
-                            Console.WriteLine("what");
-                            break;
+                        // Add player to list of connections
+                        // TODO replace connects with player ID from database.
+                        // TODO check if player is already connected
+                        if ( clients.TryAdd(connects, clientMessage.Origin) )
+                        {
+                            timeouts.Add(connects, 10);
+                            Console.WriteLine("added connection with id="+connects);
+                            connects++;
+                        }
+
+                    }
+                    else if (true) // TODO compare ID in packet with connected client? hell, maybe don't bother
+                    {
+                        switch (clientMessage.GetClientMessageType())
+                        {
+                            case ClientMessageType.Disconnect:
+                                // Remove player from list of connections
+                                // Probably also check if stuff matches like in command
+                                //clients.Remove(0);
+                                Console.WriteLine("received disconnect!");
+                                break;
+                            case ClientMessageType.Command:
+                                Console.WriteLine("received command! " + ((ClientMessageCommand)clientMessage).PlayerAction.ToString());
+                                //TODO timeouts.Add(clientMessage.PlayerId(), 10);
+                                break;
+                            case ClientMessageType.Invalid:
+                                Console.WriteLine("received invalid");
+                                break;
+                            default:
+                                Console.WriteLine("what");
+                                break;
+                        }
                     }
                 }
-                foreach (int pid in clients.Keys)
+
+                /*
+                 * UPDATE PLAYERS
+                 */
+                foreach (WBPlayer player in players.Values)
                 {
                     IPEndPoint dest;
-                    if (clients.TryGetValue(pid, out dest))
+                    if (clients.TryGetValue(player.Id, out dest))
                     {
                         // TODO generate state uniquely for each player
-                        ServerMessage sm = new ServerMessageUpdate(pid, 3, 3,
+                        ServerMessage sm = new ServerMessageUpdate(player.Id, 3, 3,
                             new int[] { 0,0,0, 0,0,0, 0,0,0 }, // terrain
                             new int[] { 0,0,2,2, 1,1,3,3, 2,1,4,4 }  // entities
                             );
 
                         server.Send(sm, dest);
-                        Console.WriteLine("sent update to player with id="+pid);
+                        Console.WriteLine("sent update to player with id="+ player.Id);
                     }
+
+                    int currTimeout;
+                    if (timeouts.TryGetValue(player.Id, out currTimeout))
+                        timeouts.Add(player.Id, currTimeout - 1);
                 }
 
                 System.Threading.Thread.Sleep(2000);
@@ -98,7 +111,6 @@ namespace WoodworkBerserkServer
 
         public void stop()
         {
-            // shouldn't be necessary to sync this, right?
             running = false;
         }
     }

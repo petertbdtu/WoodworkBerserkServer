@@ -35,7 +35,7 @@ namespace WoodworkBerserkServer.Server
         }
         public void Send(ServerMessage smsg, IPEndPoint dest)
         {
-            c.SendAsync(smsg.Bytes(), smsg.NumBytes(), dest);
+            c.SendAsync(smsg.Data, smsg.Data.Length, dest);
         }
         private void Receive()
         {
