@@ -52,6 +52,7 @@ namespace WoodworkBerserkServer
                         // TODO check if player is already connected
                         if ( clients.TryAdd(connects, clientMessage.Origin) )
                         {
+                            players.Add(connects, new WBPlayer(connects, 1, 1, 1));
                             timeouts.Add(connects, 10);
                             Console.WriteLine("added connection with id="+connects);
                             connects++;
@@ -102,7 +103,7 @@ namespace WoodworkBerserkServer
 
                     int currTimeout;
                     if (timeouts.TryGetValue(player.Id, out currTimeout))
-                        timeouts.Add(player.Id, currTimeout - 1);
+                        timeouts[player.Id] = currTimeout-1;
                 }
 
                 System.Threading.Thread.Sleep(2000);

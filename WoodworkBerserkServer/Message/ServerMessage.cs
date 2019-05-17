@@ -61,7 +61,7 @@ namespace WoodworkBerserkServer.Message
             // type, playerId, mapWidth, mapHeight, terrain, entities
             // 1 + sizeof(int) * (1 + 1 + 1 + terrain.Length + entitiesData.Length);
             int dataSize = 1 + sizeof(int) * (1 + 1 + 1 + terrain.Length + entitiesData.Length);
-            byte[] data = new byte[dataSize];
+            Data = new byte[dataSize];
             Data[0] = (byte)ServerMessageType.Update;
 
             byte[] playerIdBytes = BitConverter.GetBytes(playerId);
