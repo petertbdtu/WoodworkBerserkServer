@@ -38,8 +38,7 @@ namespace WoodworkBerserkServer
             Dictionary<int, IPEndPoint> clients = new Dictionary<int, IPEndPoint>();
             // playerId and corresponding connection timeout
             Dictionary<int, int> timeouts = new Dictionary<int, int>();
-
-            int connects = 0;
+            
             running = true;
             while (running)
             {
@@ -50,26 +49,20 @@ namespace WoodworkBerserkServer
                 {
                     if (clientMessage.GetClientMessageType() == ClientMessageType.Connect)
                     {
-                        // Add player to list of connections
-                        // TODO replace connects with player ID from database.
-                        // TODO check if player is already connected
-                        Console.WriteLine(clientMessages.GetValue(0).ToString());
-                        string username = clientMessages.GetValue(0).ToString();
-                        string password = clientMessages.GetValue(0).ToString();
-                        //checks if username and password is a registered player
-                        if (dbc.Authenticate(username, password))
+                        string username = ((ClientMessageConnect)clientMessage).Username;
+                        string password = ((ClientMessageConnect)clientMessage).Password;
+                        Console.WriteLine("logged in username: "+username+" password: "+password);
+
+                        // checks if username and password is a registered player
+                        // also checks if player is already logged in
+                        if (dbc.Authenticate(username, password) && !dbc.getPlayer_active(username, password))
                         {
-                            //checks if the player is already connected
-                            if (!dbc.getPlayer_active(username, password))
+                            int playerId = dbc.getPlayer_Id(username, password);
+                            if (clients.TryAdd(playerId, clientMessage.Origin))
                             {
-                                connects = dbc.getPlayer_Id(username, password);
-                                if (clients.TryAdd(connects, clientMessage.Origin))
-                                {
-                                    players.Add(connects, new WBPlayer(connects, 1, 200, 200));
-                                    timeouts.Add(connects, 10);
-                                    Console.WriteLine("added connection with id=" + connects);
-                                    connects++;
-                                }
+                                players.Add(playerId, new WBPlayer(playerId, 1, 200, 200));
+                                timeouts.Add(playerId, 10);
+                                Console.WriteLine("added connection with id=" + playerId);
                             }
                         }
                         else
@@ -83,12 +76,14 @@ namespace WoodworkBerserkServer
                         switch (clientMessage.GetClientMessageType())
                         {
                             case ClientMessageType.Disconnect:
-                                //set player_active to false in database
-                                dbc.updatePlayer_active(connects, false);
-                                // Remove player from list of connections
-                                // Probably also check if stuff matches like in command
-                                //clients.Remove(0);
                                 Console.WriteLine("received disconnect!");
+                                //set player_active to false in database
+                                int disconnectedPlayerId = clientMessage.AssumedPlayerId;
+                                dbc.updatePlayer_active(disconnectedPlayerId, false);
+                                // TODO Save player to database and remove from game.
+                                clients.Remove(disconnectedPlayerId);
+                                timeouts.Remove(disconnectedPlayerId);
+                                
                                 break;
                             case ClientMessageType.Command:
                                 Console.WriteLine("received command! " + ((ClientMessageCommand)clientMessage).PlayerAction.ToString());
@@ -115,7 +110,7 @@ namespace WoodworkBerserkServer
                         // TODO generate state uniquely for each player
                         ServerMessage sm = new ServerMessageUpdate(player.Id, 3, 3,
                             new int[] { 0,0,0, 0,0,0, 0,0,0 }, // terrain
-                            new int[] { 0,0,2,2, 1,1,3,3, 2,1,4,4 }  // entities
+                            new int[] { player.Id,0,200,200, 1,1,3,3, 2,1,4,4 }  // entities
                             );
 
                         server.Send(sm, dest);

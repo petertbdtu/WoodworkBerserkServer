@@ -48,9 +48,8 @@ namespace WoodworkBerserkServer.Server
                 }
                 catch (SocketException se)
                 {
-                    // TODO figure out how to get rid of disconnected users
                     // apparently UDP has connections now
-                    // probably just need to disconnect client elsehwere
+                    // clients are disconnected on a timeout (unless they send disconnect)
                     // since 10054 comes from a previous failed send
                     if (se.SocketErrorCode != SocketError.ConnectionReset)
                     {
