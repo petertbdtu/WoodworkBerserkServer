@@ -4,6 +4,7 @@ using WoodworkBerserkServer.Server;
 using WoodworkBerserkServer.Message;
 using System.Net;
 using System.Text;
+using WoodworkBerserk.Controllers;
 
 namespace WoodworkBerserkServer
 {
@@ -20,12 +21,14 @@ namespace WoodworkBerserkServer
     {
         public static readonly int PORT = 19567;
 
+        DatabaseConnector dbc;
         WBServer server;
         ClientMessageHandler messageHandler;
         bool running = false;
         
         public void start()
         {
+            dbc = new DatabaseConnector();
             messageHandler = new ClientMessageHandler();
             server = new WBServer(PORT);
             server.StartListening(messageHandler);
@@ -50,20 +53,38 @@ namespace WoodworkBerserkServer
                         // Add player to list of connections
                         // TODO replace connects with player ID from database.
                         // TODO check if player is already connected
-                        if ( clients.TryAdd(connects, clientMessage.Origin) )
+                        Console.WriteLine(clientMessages.GetValue(0).ToString());
+                        string username = clientMessages.GetValue(0).ToString();
+                        string password = clientMessages.GetValue(0).ToString();
+                        //checks if username and password is a registered player
+                        if (dbc.Authenticate(username, password))
                         {
-                            players.Add(connects, new WBPlayer(connects, 1, 1, 1));
-                            timeouts.Add(connects, 10);
-                            Console.WriteLine("added connection with id="+connects);
-                            connects++;
+                            //checks if the player is already connected
+                            if (!dbc.getPlayer_active(username, password))
+                            {
+                                connects = dbc.getPlayer_Id(username, password);
+                                if (clients.TryAdd(connects, clientMessage.Origin))
+                                {
+                                    players.Add(connects, new WBPlayer(connects, 1, 200, 200));
+                                    timeouts.Add(connects, 10);
+                                    Console.WriteLine("added connection with id=" + connects);
+                                    connects++;
+                                }
+                            }
                         }
-
+                        else
+                        {
+                            //wrong login credentials give information to client
+                            server.Send(new ServerMessageUpdate(-1, 0, 0, new int[0], new int[0]), clientMessage.Origin);
+                        }
                     }
                     else if (true) // TODO compare ID in packet with connected client? hell, maybe don't bother
                     {
                         switch (clientMessage.GetClientMessageType())
                         {
                             case ClientMessageType.Disconnect:
+                                //set player_active to false in database
+                                dbc.updatePlayer_active(connects, false);
                                 // Remove player from list of connections
                                 // Probably also check if stuff matches like in command
                                 //clients.Remove(0);
